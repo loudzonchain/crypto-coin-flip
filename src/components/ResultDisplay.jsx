@@ -1,26 +1,27 @@
-// ResultDisplay.jsx - Shows WIN or LOSE after a flip
+// ResultDisplay.jsx - WIN = gold glow, LOSE = red glow
 
-export default function ResultDisplay({ result, playerChoice }) {
-  // Don't show anything if there's no result yet
+export default function ResultDisplay({ result, playerChoice, balanceChange }) {
   if (!result) return null
 
   const isWin = result === playerChoice
 
   return (
-    <div className="text-center">
-      {/* Big WIN or LOSE text */}
+    <div className="text-center result-pop">
       <p
-        className={`text-4xl sm:text-5xl font-black tracking-wider ${
-          isWin ? 'text-green-400 win-glow' : 'text-red-400'
+        className={`text-3xl sm:text-4xl font-black tracking-wide ${
+          isWin ? 'text-amber-500 win-shimmer' : 'text-red-500 lose-shimmer'
         }`}
       >
-        {isWin ? '🎉 WIN!' : '😤 LOSE'}
+        {isWin ? 'WIN!' : 'LOSE'}
       </p>
-
-      {/* Show what the coin landed on */}
-      <p className="mt-2 text-sm sm:text-base text-purple-200/60">
+      <p className="mt-1 text-xs sm:text-sm text-gray-500">
         Coin landed on{' '}
-        <span className="font-semibold text-white capitalize">{result}</span>
+        <span className="font-semibold text-gray-300 capitalize">{result}</span>
+        {balanceChange != null && (
+          <span className={`ml-2 font-bold ${isWin ? 'text-amber-500' : 'text-red-400'}`}>
+            {isWin ? `+${balanceChange}` : `${balanceChange}`}
+          </span>
+        )}
       </p>
     </div>
   )

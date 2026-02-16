@@ -1,15 +1,23 @@
 // App.jsx - Main game logic for Crypto Flip
-// Ties together the Coin, ScoreBoard, ResultDisplay, Leaderboard, and NameEntry
+// Dark theme with gold/amber accents, macOS window style
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import Window from './components/Window'
 import Coin from './components/Coin'
 import ScoreBoard from './components/ScoreBoard'
 import ResultDisplay from './components/ResultDisplay'
 import Leaderboard from './components/Leaderboard'
 import NameEntry from './components/NameEntry'
+import Confetti from './components/Confetti'
+import GoldRain from './components/GoldRain'
+import { playFlipSound, playWinSound, playLoseSound } from './utils/sounds'
+
+// --- Constants ---
+const BET_AMOUNT = 10
+const WIN_PAYOUT = 20
+const STARTING_BALANCE = 100
 
 // --- localStorage helpers ---
-// Read leaderboard from localStorage (returns array of entries)
 function loadLeaderboard() {
   try {
     const data = localStorage.getItem('cryptoFlipLeaderboard')
@@ -19,9 +27,21 @@ function loadLeaderboard() {
   }
 }
 
-// Save leaderboard array to localStorage
 function saveLeaderboard(entries) {
   localStorage.setItem('cryptoFlipLeaderboard', JSON.stringify(entries))
+}
+
+function loadBalance() {
+  try {
+    const data = localStorage.getItem('cryptoFlipBalance')
+    return data ? JSON.parse(data) : STARTING_BALANCE
+  } catch {
+    return STARTING_BALANCE
+  }
+}
+
+function saveBalance(balance) {
+  localStorage.setItem('cryptoFlipBalance', JSON.stringify(balance))
 }
 
 function App() {
@@ -31,169 +51,229 @@ function App() {
   const [result, setResult] = useState(null)
   const [wins, setWins] = useState(0)
   const [totalFlips, setTotalFlips] = useState(0)
+  const [showConfetti, setShowConfetti] = useState(false)
+  const [lastBalanceChange, setLastBalanceChange] = useState(null)
+
+  // Balance and streak state
+  const [balance, setBalance] = useState(loadBalance)
+  const [streak, setStreak] = useState(0)
+  const [bestStreak, setBestStreak] = useState(0)
 
   // Leaderboard state
   const [leaderboard, setLeaderboard] = useState(loadLeaderboard)
   const [showLeaderboard, setShowLeaderboard] = useState(false)
   const [showNameEntry, setShowNameEntry] = useState(false)
-  const [playerName, setPlayerName] = useState(null) // set once player enters their name
-  const [hasPrompted, setHasPrompted] = useState(false) // only prompt once per session
+  const [playerName, setPlayerName] = useState(null)
+  const [hasPrompted, setHasPrompted] = useState(false)
 
-  // When a flip completes, check if we should prompt for name or update score
+  // Persist balance whenever it changes
   useEffect(() => {
-    // Only run after a flip finishes (not during flipping)
-    if (isFlipping || totalFlips === 0) return
+    saveBalance(balance)
+  }, [balance])
 
-    // First time hitting 3 wins → show name entry
-    if (wins >= 3 && !playerName && !hasPrompted) {
-      setShowNameEntry(true)
-      setHasPrompted(true)
-      return
-    }
-
-    // If player already has a name, silently update their leaderboard entry
-    if (playerName) {
-      updateLeaderboardEntry(playerName, wins, totalFlips)
-    }
-  }, [wins, totalFlips]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Update or add an entry in the leaderboard
-  function updateLeaderboardEntry(name, playerWins, playerTotalFlips) {
+  // Update or add a leaderboard entry
+  const updateLeaderboardEntry = useCallback((name, playerWins, playerTotalFlips) => {
     setLeaderboard((prev) => {
-      // Check if this player already has an entry
       const existingIndex = prev.findIndex(
         (e) => e.name.toLowerCase() === name.toLowerCase()
       )
 
       let updated
       if (existingIndex !== -1) {
-        // Update existing entry
         updated = prev.map((e, i) =>
           i === existingIndex
             ? { ...e, wins: playerWins, totalFlips: playerTotalFlips }
             : e
         )
       } else {
-        // Add new entry
         updated = [...prev, { name, wins: playerWins, totalFlips: playerTotalFlips }]
       }
 
-      // Sort by wins (highest first), keep top 10
       updated.sort((a, b) => b.wins - a.wins)
       updated = updated.slice(0, 10)
-
-      // Persist to localStorage
       saveLeaderboard(updated)
       return updated
     })
-  }
+  }, [])
 
-  // Called when player saves their name from the NameEntry modal
+  // Check if we should prompt for name or update leaderboard
+  useEffect(() => {
+    if (isFlipping || totalFlips === 0) return
+
+    if (wins >= 3 && !playerName && !hasPrompted) {
+      setShowNameEntry(true)
+      setHasPrompted(true)
+      return
+    }
+
+    if (playerName) {
+      updateLeaderboardEntry(playerName, wins, totalFlips)
+    }
+  }, [wins, totalFlips, isFlipping, playerName, hasPrompted, updateLeaderboardEntry])
+
   function handleNameSave(name) {
     setPlayerName(name)
     setShowNameEntry(false)
     updateLeaderboardEntry(name, wins, totalFlips)
   }
 
-  // Called when player skips name entry
   function handleNameSkip() {
     setShowNameEntry(false)
     setHasPrompted(true)
   }
 
-  // Called when the player clicks the FLIP button
+  function handleReset() {
+    setWins(0)
+    setTotalFlips(0)
+    setResult(null)
+    setPlayerChoice(null)
+    setPlayerName(null)
+    setHasPrompted(false)
+    setBalance(STARTING_BALANCE)
+    setStreak(0)
+    setBestStreak(0)
+    setLastBalanceChange(null)
+  }
+
+  // Main flip handler
   function handleFlip() {
     if (!playerChoice || isFlipping) return
+    if (balance < BET_AMOUNT) return
 
     setResult(null)
+    setShowConfetti(false)
+    setLastBalanceChange(null)
     setIsFlipping(true)
+    playFlipSound()
 
     const coinResult = Math.random() < 0.5 ? 'heads' : 'tails'
     setResult(coinResult)
 
     setTimeout(() => {
       setIsFlipping(false)
+      const isWin = coinResult === playerChoice
+
       setTotalFlips((prev) => prev + 1)
-      if (coinResult === playerChoice) {
+
+      if (isWin) {
         setWins((prev) => prev + 1)
+        setBalance((prev) => prev + WIN_PAYOUT)
+        setLastBalanceChange(WIN_PAYOUT)
+        setStreak((prev) => {
+          const newStreak = prev + 1
+          setBestStreak((best) => Math.max(best, newStreak))
+          return newStreak
+        })
+        playWinSound()
+        setShowConfetti(true)
+        setTimeout(() => setShowConfetti(false), 3000)
+      } else {
+        setBalance((prev) => prev - BET_AMOUNT)
+        setLastBalanceChange(-BET_AMOUNT)
+        setStreak(0)
+        playLoseSound()
       }
-    }, 1200)
+    }, 1400)
   }
 
+  const canFlip = playerChoice && !isFlipping && balance >= BET_AMOUNT
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-950 to-indigo-950 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm sm:max-w-md flex flex-col items-center gap-8">
-        {/* Title */}
-        <h1 className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400 tracking-tight">
-          Crypto Flip
-        </h1>
+    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Subtle falling gold particles behind everything */}
+      <GoldRain />
 
-        {/* Score tracker */}
-        <ScoreBoard wins={wins} totalFlips={totalFlips} />
+      {/* Win confetti */}
+      <Confetti active={showConfetti} />
 
-        {/* The coin */}
-        <Coin isFlipping={isFlipping} result={result} />
+      {/* Main game window */}
+      <Window title="Crypto Flip" onClose={() => {}} className="w-full max-w-sm sm:max-w-md relative z-10">
+        <div className="p-5 sm:p-6 flex flex-col items-center gap-5">
+          {/* Stats panel */}
+          <ScoreBoard
+            wins={wins}
+            totalFlips={totalFlips}
+            balance={balance}
+            streak={streak}
+            bestStreak={bestStreak}
+            onReset={handleReset}
+          />
 
-        {/* Result display */}
-        <div className="h-20 flex items-center justify-center">
-          {!isFlipping && result && (
-            <ResultDisplay result={result} playerChoice={playerChoice} />
-          )}
-          {isFlipping && (
-            <p className="text-purple-300/60 text-lg animate-pulse">
-              Flipping...
-            </p>
-          )}
-        </div>
+          {/* The coin */}
+          <div className="py-2">
+            <Coin isFlipping={isFlipping} result={result} />
+          </div>
 
-        {/* Heads or Tails selection */}
-        <div className="flex gap-4">
-          <button
-            onClick={() => !isFlipping && setPlayerChoice('heads')}
-            className={`px-6 py-3 rounded-xl font-bold text-sm sm:text-base uppercase tracking-wider transition-all duration-200 cursor-pointer ${
-              playerChoice === 'heads'
-                ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/40 scale-105'
-                : 'bg-white/10 text-purple-200 hover:bg-white/20'
-            }`}
-          >
-            🪙 Heads
-          </button>
-          <button
-            onClick={() => !isFlipping && setPlayerChoice('tails')}
-            className={`px-6 py-3 rounded-xl font-bold text-sm sm:text-base uppercase tracking-wider transition-all duration-200 cursor-pointer ${
-              playerChoice === 'tails'
-                ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/40 scale-105'
-                : 'bg-white/10 text-purple-200 hover:bg-white/20'
-            }`}
-          >
-            💰 Tails
-          </button>
-        </div>
+          {/* Result display */}
+          <div className="h-16 flex items-center justify-center">
+            {!isFlipping && result && (
+              <ResultDisplay
+                result={result}
+                playerChoice={playerChoice}
+                balanceChange={lastBalanceChange}
+              />
+            )}
+            {isFlipping && (
+              <p className="text-gray-500 text-sm animate-pulse">
+                Flipping...
+              </p>
+            )}
+            {!isFlipping && !result && (
+              <p className="text-gray-600 text-sm">
+                {balance < BET_AMOUNT
+                  ? 'Out of coins! Reset to play again.'
+                  : 'Pick a side and flip!'}
+              </p>
+            )}
+          </div>
 
-        {/* Flip button */}
-        <button
-          onClick={handleFlip}
-          disabled={!playerChoice || isFlipping}
-          className="w-full max-w-xs py-4 rounded-2xl font-black text-lg uppercase tracking-widest transition-all duration-200 cursor-pointer bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-[1.02] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
-        >
-          {isFlipping ? 'Flipping...' : 'Flip!'}
-        </button>
+          {/* Heads / Tails selection - dark bg, gold border when selected */}
+          <div className="flex gap-3 w-full">
+            <button
+              onClick={() => !isFlipping && setPlayerChoice('heads')}
+              className={`flex-1 py-3 rounded-lg font-semibold text-sm transition-all duration-150 cursor-pointer border active:scale-95 ${
+                playerChoice === 'heads'
+                  ? 'bg-amber-500 text-black border-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.3)]'
+                  : 'bg-[#222] text-gray-300 border-amber-500/20 hover:border-amber-500/40'
+              }`}
+            >
+              🪙 Heads
+            </button>
+            <button
+              onClick={() => !isFlipping && setPlayerChoice('tails')}
+              className={`flex-1 py-3 rounded-lg font-semibold text-sm transition-all duration-150 cursor-pointer border active:scale-95 ${
+                playerChoice === 'tails'
+                  ? 'bg-amber-500 text-black border-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.3)]'
+                  : 'bg-[#222] text-gray-300 border-amber-500/20 hover:border-amber-500/40'
+              }`}
+            >
+              💰 Tails
+            </button>
+          </div>
 
-        {/* Leaderboard toggle button */}
-        <button
-          onClick={() => setShowLeaderboard(true)}
-          className="text-sm text-purple-300/50 hover:text-purple-300 transition-colors cursor-pointer flex items-center gap-1.5"
-        >
-          🏆 Leaderboard
-        </button>
-
-        {/* Hint text */}
-        {!playerChoice && !result && (
-          <p className="text-purple-300/40 text-sm">
-            Pick Heads or Tails to start
+          {/* Bet indicator */}
+          <p className="text-[11px] text-gray-600 -mt-2">
+            Bet: {BET_AMOUNT} coins per flip
           </p>
-        )}
-      </div>
+
+          {/* Flip button - gold/amber gradient with dark text */}
+          <button
+            onClick={handleFlip}
+            disabled={!canFlip}
+            className="w-full py-3 rounded-lg font-bold text-sm uppercase tracking-wider cursor-pointer bg-gradient-to-r from-amber-500 to-yellow-500 text-black hover:from-amber-400 hover:to-yellow-400 active:from-amber-600 active:to-yellow-600 active:scale-95 transition-all shadow-[0_4px_20px_rgba(245,158,11,0.2)] disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
+          >
+            {isFlipping ? 'Flipping...' : 'Flip Coin'}
+          </button>
+
+          {/* Leaderboard toggle - gold-tinted pill */}
+          <button
+            onClick={() => setShowLeaderboard(true)}
+            className="text-xs font-medium text-amber-500/70 bg-amber-500/5 border border-amber-500/15 hover:bg-amber-500/10 transition-colors cursor-pointer rounded-full px-4 py-1.5"
+          >
+            View Leaderboard
+          </button>
+        </div>
+      </Window>
 
       {/* Leaderboard modal */}
       {showLeaderboard && (
@@ -203,7 +283,7 @@ function App() {
         />
       )}
 
-      {/* Name entry modal - appears once at 3 wins */}
+      {/* Name entry modal */}
       {showNameEntry && (
         <NameEntry onSave={handleNameSave} onSkip={handleNameSkip} />
       )}
