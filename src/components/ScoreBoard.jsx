@@ -1,4 +1,4 @@
-// ScoreBoard.jsx - Dark themed stats panel with gold/amber accents
+// ScoreBoard.jsx - Premium stats panel with colored left borders and glowing numbers
 
 import useAnimatedNumber from '../hooks/useAnimatedNumber'
 
@@ -22,9 +22,9 @@ export default function ScoreBoard({
     <div className="w-full flex flex-col gap-3">
       {/* Balance and streak row */}
       <div className="flex items-center justify-between px-1">
-        <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full px-3 py-1">
+        <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full px-3 py-1 shadow-[0_0_8px_rgba(245,158,11,0.08)]">
           <span className="text-sm">🪙</span>
-          <span className="text-base font-bold text-amber-500">
+          <span className="text-base font-bold text-amber-500 glow-amber">
             {displayBalance}
           </span>
         </div>
@@ -40,40 +40,44 @@ export default function ScoreBoard({
         </div>
       </div>
 
-      {/* Stats grid - dark cards with gold/amber numbers */}
+      {/* Stats grid - dark cards with colored left borders and glowing numbers */}
       <div className="grid grid-cols-4 gap-2 sm:gap-3">
-        <div className="bg-[#222] rounded-lg p-2 sm:p-3 text-center border border-white/5">
+        {/* Flips - blue left border */}
+        <div className="bg-[#1a1a1a] rounded-lg p-2 sm:p-3 text-center border border-white/5 border-l-[3px] border-l-blue-400/60">
           <p className="text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider">
             Flips
           </p>
-          <p className="text-lg sm:text-2xl font-bold text-amber-500">
+          <p className="text-lg sm:text-2xl font-bold text-blue-400 glow-blue">
             {displayFlips}
           </p>
         </div>
 
-        <div className="bg-[#222] rounded-lg p-2 sm:p-3 text-center border border-white/5">
+        {/* Wins - green left border */}
+        <div className="bg-[#1a1a1a] rounded-lg p-2 sm:p-3 text-center border border-white/5 border-l-[3px] border-l-green-400/60">
           <p className="text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider">
             Wins
           </p>
-          <p className="text-lg sm:text-2xl font-bold text-amber-500">
+          <p className="text-lg sm:text-2xl font-bold text-green-400 glow-green">
             {displayWins}
           </p>
         </div>
 
-        <div className="bg-[#222] rounded-lg p-2 sm:p-3 text-center border border-white/5">
+        {/* Losses - red left border */}
+        <div className="bg-[#1a1a1a] rounded-lg p-2 sm:p-3 text-center border border-white/5 border-l-[3px] border-l-red-400/60">
           <p className="text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider">
             Losses
           </p>
-          <p className="text-lg sm:text-2xl font-bold text-red-400">
+          <p className="text-lg sm:text-2xl font-bold text-red-400 glow-red">
             {displayLosses}
           </p>
         </div>
 
-        <div className="bg-[#222] rounded-lg p-2 sm:p-3 text-center border border-white/5">
+        {/* Win % - gold left border */}
+        <div className="bg-[#1a1a1a] rounded-lg p-2 sm:p-3 text-center border border-white/5 border-l-[3px] border-l-amber-400/60">
           <p className="text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider">
             Win %
           </p>
-          <p className="text-lg sm:text-2xl font-bold text-amber-500">
+          <p className="text-lg sm:text-2xl font-bold text-amber-500 glow-amber">
             {winRate !== null ? `${winRate}%` : '—'}
           </p>
         </div>

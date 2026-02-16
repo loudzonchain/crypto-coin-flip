@@ -1,15 +1,15 @@
-// GoldRain.jsx - Subtle animated falling gold/amber particles
-// Like matrix rain but gold dots, very subtle on dark background
+// GoldRain.jsx - Premium animated falling gold/amber particles
+// More particles with varied sizes for a richer atmosphere
 
 import { useMemo } from 'react'
 
 // Generate particles once (doesn't change between renders)
-function createParticles(count = 30) {
+function createParticles(count = 40) {
   return Array.from({ length: count }, (_, i) => ({
     id: i,
     left: Math.random() * 100,
-    size: Math.random() * 2.5 + 1,          // 1–3.5px
-    opacity: Math.random() * 0.3 + 0.15,    // 0.15–0.45
+    size: Math.random() * 3 + 1,            // 1–4px
+    opacity: Math.random() * 0.35 + 0.15,   // 0.15–0.50
     fallDuration: Math.random() * 6 + 5,     // 5–11s (slow drift)
     fallDelay: Math.random() * 8,            // stagger start
   }))

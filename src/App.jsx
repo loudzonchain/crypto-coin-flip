@@ -59,6 +59,9 @@ function App() {
   const [streak, setStreak] = useState(0)
   const [bestStreak, setBestStreak] = useState(0)
 
+  // Landing burst effect
+  const [justLanded, setJustLanded] = useState(false)
+
   // Leaderboard state
   const [leaderboard, setLeaderboard] = useState(loadLeaderboard)
   const [showLeaderboard, setShowLeaderboard] = useState(false)
@@ -133,6 +136,7 @@ function App() {
     setStreak(0)
     setBestStreak(0)
     setLastBalanceChange(null)
+    setJustLanded(false)
   }
 
   // Main flip handler
@@ -143,6 +147,7 @@ function App() {
     setResult(null)
     setShowConfetti(false)
     setLastBalanceChange(null)
+    setJustLanded(false)
     setIsFlipping(true)
     playFlipSound()
 
@@ -151,7 +156,11 @@ function App() {
 
     setTimeout(() => {
       setIsFlipping(false)
+      setJustLanded(true)
       const isWin = coinResult === playerChoice
+
+      // Clear the landing burst after the animation plays
+      setTimeout(() => setJustLanded(false), 600)
 
       setTotalFlips((prev) => prev + 1)
 
@@ -179,7 +188,10 @@ function App() {
   const canFlip = playerChoice && !isFlipping && balance >= BET_AMOUNT
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4 relative overflow-hidden">
+    <div
+      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+      style={{ background: 'radial-gradient(ellipse at center, #161310 0%, #0a0a0a 70%)' }}
+    >
       {/* Subtle falling gold particles behind everything */}
       <GoldRain />
 
@@ -201,7 +213,7 @@ function App() {
 
           {/* The coin */}
           <div className="py-2">
-            <Coin isFlipping={isFlipping} result={result} />
+            <Coin isFlipping={isFlipping} result={result} justLanded={justLanded} />
           </div>
 
           {/* Result display */}
@@ -227,14 +239,14 @@ function App() {
             )}
           </div>
 
-          {/* Heads / Tails selection - dark bg, gold border when selected */}
+          {/* Heads / Tails selection - gold border glow when selected */}
           <div className="flex gap-3 w-full">
             <button
               onClick={() => !isFlipping && setPlayerChoice('heads')}
               className={`flex-1 py-3 rounded-lg font-semibold text-sm transition-all duration-150 cursor-pointer border active:scale-95 ${
                 playerChoice === 'heads'
-                  ? 'bg-amber-500 text-black border-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.3)]'
-                  : 'bg-[#222] text-gray-300 border-amber-500/20 hover:border-amber-500/40'
+                  ? 'bg-amber-500/15 text-amber-400 border-amber-400 shadow-[0_0_16px_rgba(245,158,11,0.25)]'
+                  : 'bg-[#1a1a1a] text-gray-400 border-amber-500/15 hover:border-amber-500/40 hover:shadow-[0_0_8px_rgba(245,158,11,0.1)]'
               }`}
             >
               🪙 Heads
@@ -243,8 +255,8 @@ function App() {
               onClick={() => !isFlipping && setPlayerChoice('tails')}
               className={`flex-1 py-3 rounded-lg font-semibold text-sm transition-all duration-150 cursor-pointer border active:scale-95 ${
                 playerChoice === 'tails'
-                  ? 'bg-amber-500 text-black border-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.3)]'
-                  : 'bg-[#222] text-gray-300 border-amber-500/20 hover:border-amber-500/40'
+                  ? 'bg-amber-500/15 text-amber-400 border-amber-400 shadow-[0_0_16px_rgba(245,158,11,0.25)]'
+                  : 'bg-[#1a1a1a] text-gray-400 border-amber-500/15 hover:border-amber-500/40 hover:shadow-[0_0_8px_rgba(245,158,11,0.1)]'
               }`}
             >
               💰 Tails
@@ -256,19 +268,19 @@ function App() {
             Bet: {BET_AMOUNT} coins per flip
           </p>
 
-          {/* Flip button - gold/amber gradient with dark text */}
+          {/* Flip button - animated shifting gold gradient */}
           <button
             onClick={handleFlip}
             disabled={!canFlip}
-            className="w-full py-3 rounded-lg font-bold text-sm uppercase tracking-wider cursor-pointer bg-gradient-to-r from-amber-500 to-yellow-500 text-black hover:from-amber-400 hover:to-yellow-400 active:from-amber-600 active:to-yellow-600 active:scale-95 transition-all shadow-[0_4px_20px_rgba(245,158,11,0.2)] disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
+            className="w-full py-3 rounded-lg font-bold text-sm uppercase tracking-wider cursor-pointer gradient-shift-btn text-black hover:shadow-[0_0_24px_rgba(245,158,11,0.3)] active:scale-95 transition-all shadow-[0_4px_20px_rgba(245,158,11,0.15)] disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 disabled:animate-none"
           >
             {isFlipping ? 'Flipping...' : 'Flip Coin'}
           </button>
 
-          {/* Leaderboard toggle - gold-tinted pill */}
+          {/* Leaderboard toggle - shimmering gold border */}
           <button
             onClick={() => setShowLeaderboard(true)}
-            className="text-xs font-medium text-amber-500/70 bg-amber-500/5 border border-amber-500/15 hover:bg-amber-500/10 transition-colors cursor-pointer rounded-full px-4 py-1.5"
+            className="shimmer-border text-xs font-medium text-amber-500/70 bg-amber-500/5 border border-amber-500/20 hover:bg-amber-500/10 hover:shadow-[0_0_12px_rgba(245,158,11,0.1)] transition-all cursor-pointer rounded-full px-4 py-1.5"
           >
             View Leaderboard
           </button>

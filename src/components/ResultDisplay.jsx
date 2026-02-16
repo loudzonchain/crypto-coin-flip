@@ -1,4 +1,4 @@
-// ResultDisplay.jsx - WIN = gold glow, LOSE = red glow
+// ResultDisplay.jsx - WIN = starburst glow + gold shimmer, LOSE = shake + red shimmer
 
 export default function ResultDisplay({ result, playerChoice, balanceChange }) {
   if (!result) return null
@@ -6,7 +6,7 @@ export default function ResultDisplay({ result, playerChoice, balanceChange }) {
   const isWin = result === playerChoice
 
   return (
-    <div className="text-center result-pop">
+    <div className={`text-center result-pop ${isWin ? 'win-starburst' : 'lose-shake'}`}>
       <p
         className={`text-3xl sm:text-4xl font-black tracking-wide ${
           isWin ? 'text-amber-500 win-shimmer' : 'text-red-500 lose-shimmer'
